@@ -6,7 +6,7 @@ $passwordgenerator
     if ($Answer -eq "Yes" ) { 
         $Custom = Read-Host "Input your password"  #-AsSecureString
         $plaintext = Read-Host "Do you want your password in plaintext? Please answer -Yes or -No" 
-        if ($plaintext -like "Yes") {
+        if ($plaintext -eq "Yes") {
             Read-Host $Custom  
         }
         if ($plaintext -ne "Yes") {
