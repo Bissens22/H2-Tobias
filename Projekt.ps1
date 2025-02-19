@@ -58,30 +58,62 @@ function Create-adNewUser {
 
 # Menu to choose an action
 while ($true) {
-    $choice = Read-Host "Choose an option: (Locala - Create Local Admin, aduser - Create AD User, exit - Quit)"
+    $choice = Read-Host "Choose an option: (Locala - Create Local Admin, aduser - Work with AD Users, exit - Quit)"
     
     if ($choice -eq "Locala") {
         $NewLocalAdmin = Read-Host "Enter new local admin username"
         $Password = Read-Host -AsSecureString "Enter password for $NewLocalAdmin"
         Create-NewLocalAdmin -NewLocalAdmin $NewLocalAdmin -Password $Password
     }
-    elseif ($choice -eq "aduser") {
-        $adName = Read-Host "Enter the name of the user"
-        $adGivenName = Read-Host "Enter the user's first name"
-        $adsurname = Read-Host "Enter the user's surname"
-        $adLetteroffirstname = Read-Host "Enter the first letter of the user's first name"
-        $adsamaccountname = "$adLetteroffirstname$adsurname"
-        $aduserprincipalname = Read-Host "Enter user's full domain name/SMTP mail"
-        $adOU = Read-Host "Enter the OU path (use OU=<Path>)"
-        $adaccountPassword = Read-Host "Enter the user's temporary password" | ConvertTo-SecureString -AsPlainText -Force
-
-        Create-adNewUser -adName $adName `
-                         -adGivenName $adGivenName `
-                         -adsurname $adsurname `
-                         -adsamaccountname $adsamaccountname `
-                         -aduserprincipalname $aduserprincipalname `
-                         -adOU $adOU `
-                         -adaccountPassword $adaccountPassword
+    elseif ($Choice -eq "aduser") {
+        $Userchoice = Read-host "Choose an option: (1 - List users in OU, 2 - Create a new Users, 3 - Change the password of a user, 4 - Delete a user)"
+        
+        # List users in an OU
+        if ($Userchoice -eq "1") {
+            $adOU = Read-Host "Enter the OU path (use OU=<UsersOU>)"
+            Invoke-Command -Session $session -ScriptBlock {
+                param ($adOU)
+                Get-ADUser -Filter * -SearchBase "$adOU" | Select-Object Name, SamAccountName, UserPrincipalName
+            } -ArgumentList $adOU
+        }
+        # Create a new user
+        if ($Userchoice -eq "2") {
+            $adName = Read-Host "Enter the name of the user"
+            $adGivenName = Read-Host "Enter the user's first name"
+            $adsurname = Read-Host "Enter the user's surname"
+            $adLetteroffirstname = Read-Host "Enter the first letter of the user's first name"
+            $adsamaccountname = "$adLetteroffirstname$adsurname"
+            $aduserprincipalname = Read-Host "Enter user's full domain name/SMTP mail"
+            $adOU = Read-Host "Enter the OU path (use OU=<UsersOU>)"
+            $adaccountPassword = Read-Host "Enter the user's temporary password" | ConvertTo-SecureString -AsPlainText -Force
+    
+            Create-adNewUser -adName $adName `
+                             -adGivenName $adGivenName `
+                             -adsurname $adsurname `
+                             -adsamaccountname $adsamaccountname `
+                             -aduserprincipalname $aduserprincipalname `
+                             -adOU $adOU `
+                             -adaccountPassword $adaccountPassword
+        } 
+        # Change the password of a user
+        if ($Userchoice -eq "3") {
+            $aduser = Read-Host "Enter the username of the user"
+            $adnewpassword = Read-Host "Enter the new password for the user" | ConvertTo-SecureString -AsPlainText -Force
+            Invoke-Command -Session $session -ScriptBlock {
+                param ($aduser, $adnewpassword)
+                Set-ADAccountPassword -Identity "$aduser" -NewPassword $adnewpassword -Reset
+                Write-Output "$aduser's password has been changed."
+            } -ArgumentList $aduser, $adnewpassword
+        }
+        # Delete a user
+        if ($Userchoice -eq "4") {
+            $aduser = Read-Host "Enter the username of the user"
+            Invoke-Command -Session $session -ScriptBlock {
+                param ($aduser)
+                Remove-ADUser -Identity "$aduser" -Confirm:$false
+                Write-Output "$aduser has been deleted."
+            } -ArgumentList $aduser
+        }
     }
     elseif ($choice -eq "exit") {
         Write-Host "Exiting script..."
