@@ -66,7 +66,7 @@ while ($true) {
         Create-NewLocalAdmin -NewLocalAdmin $NewLocalAdmin -Password $Password
     }
     elseif ($Choice -eq "aduser") {
-        $Userchoice = Read-host "Choose an option: (1 - List users in OU, 2 - Create a new Users, 3 - Change the password of a user, 4 - Delete a user)"
+        $Userchoice = Read-host "Choose an option: (1 - List users in OU, 2 - Create a new Users, 3 - Change the password of a user, 4 - Delete a user, 5 - Import users from a csv file)"
         
         # List users in an OU
         if ($Userchoice -eq "1") {
@@ -84,7 +84,7 @@ while ($true) {
             $adLetteroffirstname = Read-Host "Enter the first letter of the user's first name"
             $adsamaccountname = "$adLetteroffirstname$adsurname"
             $aduserprincipalname = Read-Host "Enter user's full domain name/SMTP mail"
-            $adOU = Read-Host "Enter the OU path (use OU=<UsersOU>)"
+            $adOU = Read-Host "Enter the OU path (use OU=<UsersOU>,DC=Gruppe4,DC=lab)"
             $adaccountPassword = Read-Host "Enter the user's temporary password" | ConvertTo-SecureString -AsPlainText -Force
     
             Create-adNewUser -adName $adName `
@@ -101,8 +101,12 @@ while ($true) {
             $adnewpassword = Read-Host "Enter the new password for the user" | ConvertTo-SecureString -AsPlainText -Force
             Invoke-Command -Session $session -ScriptBlock {
                 param ($aduser, $adnewpassword)
-                Set-ADAccountPassword -Identity "$aduser" -NewPassword $adnewpassword -Reset
-                Write-Output "$aduser's password has been changed."
+                if (Get-ADUser -Identity "$aduser") {
+                    Set-ADAccountPassword -Identity "$aduser" -NewPassword $adnewpassword -Reset
+                    Write-Output "$aduser's password has been changed."
+                } else {
+                    Write-Output "User not found."
+                }
             } -ArgumentList $aduser, $adnewpassword
         }
         # Delete a user
@@ -110,9 +114,22 @@ while ($true) {
             $aduser = Read-Host "Enter the username of the user"
             Invoke-Command -Session $session -ScriptBlock {
                 param ($aduser)
-                Remove-ADUser -Identity "$aduser" -Confirm:$false
-                Write-Output "$aduser has been deleted."
+                $ask = Read-Host "Are you sure you want to delete $aduser? (yes/no)"
+                if ($ask -eq "yes") {
+                    Remove-ADUser -Identity "$aduser" -Confirm:$false
+                    Write-Output "$aduser has been deleted."
+                }
+                if ($ask -eq "no") {
+                    Write-Output "User has not been deleted."
+                }                
             } -ArgumentList $aduser
+        }
+        if $userchoice -eq "5" {
+            $csvfile = Read-Host "Enter the path to the csv file"
+            $adOU = Read-Host "Enter the OU path (use OU=<UsersOU>,DC=Gruppe4,DC=lab)"
+            $users = Import-Csv $csvfile
+
+            }
         }
     }
     elseif ($choice -eq "exit") {
