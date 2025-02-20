@@ -85,7 +85,6 @@ while ($true) {
             $adsamaccountname = "$adLetteroffirstname$adsurname"
             $aduserprincipalname = "$adsamaccountname@Gruppe4.lab"
             $adOU = Read-Host "Enter the OU path (use OU=<UsersOU>,DC=Gruppe4,DC=lab)"
-            $adOU = "OU=$adOU,DC=Gruppe4,DC=lab"
             $adaccountPassword = Read-Host "Enter the user's temporary password" | ConvertTo-SecureString -AsPlainText -Force
     
             Create-adNewUser -adName $adName `
