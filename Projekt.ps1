@@ -124,11 +124,26 @@ while ($true) {
                 }                
             } -ArgumentList $aduser
         }
-        if $userchoice -eq "5" {
+        if ($userchoice -eq "5") {
             $csvfile = Read-Host "Enter the path to the csv file"
-            $adOU = Read-Host "Enter the OU path (use OU=<UsersOU>,DC=Gruppe4,DC=lab)"
             $users = Import-Csv $csvfile
-
+            foreach ($user in $users) {
+                $adName = $user.Name
+                $adGivenName = $user.GivenName
+                $adsurname = $user.Surname
+                $adLetteroffirstname = $user.FirstLetter
+                $adsamaccountname = "$adLetteroffirstname$adsurname"
+                $aduserprincipalname = $user.UserPrincipalName
+                $adOU = $user.OU
+                $adaccountPassword = $user.Password | ConvertTo-SecureString -AsPlainText -Force
+                Create-adNewUser -adName $adName `
+                                 -adGivenName $adGivenName `
+                                 -adsurname $adsurname `
+                                 -adsamaccountname $adsamaccountname `
+                                 -aduserprincipalname $aduserprincipalname `
+                                 -adOU $adOU `
+                                 -adaccountPassword $adaccountPassword
+            
             }
         }
     }
