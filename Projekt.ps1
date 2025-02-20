@@ -43,12 +43,12 @@ function Create-adNewUser {
     process {
         Invoke-Command -Session $session -ScriptBlock {
             param ($adName, $adGivenName, $adsurname, $adsamaccountname, $aduserprincipalname, $adOU, $adaccountPassword)
-            New-ADUser -Name "$adName" `
+            New-ADUser -Name "$adName" -CannotChangePassword $true -PasswordNeverExpires $true `
                        -GivenName "$adGivenName" `
                        -Surname "$adsurname" `
                        -SamAccountName "$adsamaccountname" `
-                       -UserPrincipalName "$aduserprincipalname" `
-                       -Path "$adOU" `
+                    -UserPrincipalName "$($adsamaccountname)@Gruppe4.lab" `
+                    -Path $adOU `
                        -AccountPassword $adaccountPassword `
                        -Enabled $true
             Write-Output "$adsamaccountname has been successfully created."
@@ -83,8 +83,9 @@ while ($true) {
             $adsurname = Read-Host "Enter the user's surname"
             $adLetteroffirstname = Read-Host "Enter the first letter of the user's first name"
             $adsamaccountname = "$adLetteroffirstname$adsurname"
-            $aduserprincipalname = Read-Host "Enter user's full domain name/SMTP mail"
+            $aduserprincipalname = "$adsamaccountname@Gruppe4.lab"
             $adOU = Read-Host "Enter the OU path (use OU=<UsersOU>,DC=Gruppe4,DC=lab)"
+            $adOU = "OU=$adOU,DC=Gruppe4,DC=lab"
             $adaccountPassword = Read-Host "Enter the user's temporary password" | ConvertTo-SecureString -AsPlainText -Force
     
             Create-adNewUser -adName $adName `
@@ -93,8 +94,8 @@ while ($true) {
                              -adsamaccountname $adsamaccountname `
                              -aduserprincipalname $aduserprincipalname `
                              -adOU $adOU `
-                             -adaccountPassword $adaccountPassword
-        } 
+            }
+        }
         # Change the password of a user
         if ($Userchoice -eq "3") {
             $aduser = Read-Host "Enter the username of the user"
@@ -124,34 +125,89 @@ while ($true) {
                 }                
             } -ArgumentList $aduser
         }
+
         if ($userchoice -eq "5") {
-            $csvfile = Read-Host "Enter the path to the csv file"
-            $users = Import-Csv $csvfile
+            $csvPath = Read-Host "Enter the path to the CSV file"
+            $users = Import-Csv -Path $csvPath
+        
+            Write-Host "DEBUG: Users Imported from CSV:"
+            $users | ForEach-Object { Write-Host "Username: $($_.Username), OU: $($_.OU), Password: $($_.Password)" }
+        
             foreach ($user in $users) {
-                $adName = $user.Name
-                $adGivenName = $user.GivenName
-                $adsurname = $user.Surname
-                $adLetteroffirstname = $user.FirstLetter
-                $adsamaccountname = "$adLetteroffirstname$adsurname"
-                $aduserprincipalname = $user.UserPrincipalName
-                $adOU = $user.OU
-                $adaccountPassword = $user.Password | ConvertTo-SecureString -AsPlainText -Force
-                Create-adNewUser -adName $adName `
-                                 -adGivenName $adGivenName `
-                                 -adsurname $adsurname `
-                                 -adsamaccountname $adsamaccountname `
-                                 -aduserprincipalname $aduserprincipalname `
-                                 -adOU $adOU `
-                                 -adaccountPassword $adaccountPassword
-            
+                try {
+                    # Ensure OU is trimmed and remove potential extra quotes
+                    $user.OU = $user.OU.Trim() -replace '^"|"$', ''  # Removes leading/trailing double quotes
+                    
+                    if (-not $user.OU -or [string]::IsNullOrEmpty($user.OU)) {
+                        Write-Error "OU is null or empty for user $($user.Username). Skipping user."
+                        continue
+                    }
+        
+                    if (-not $user.Password) {
+                        Write-Error "Password is null for user $($user.Username). Skipping user."
+                        continue
+                    }
+        
+                    Write-Host "Processing user: $($user.Username), OU: $($user.OU)"
+        
+                    try {
+                        # Check if OU exists
+                        $ouExists = Invoke-Command -Session $session -ScriptBlock {
+                            param ($ou)
+                            Get-ADOrganizationalUnit -Filter "DistinguishedName -eq '$ou'" -ErrorAction SilentlyContinue
+                        } -ArgumentList $user.OU
+        
+                        # Create OU only if it does not exist
+                        if (-not $ouExists) {
+                            Invoke-Command -Session $session -ScriptBlock {
+                                param ($ou)
+                                New-ADOrganizationalUnit -Name ($ou -split ',')[0].Replace("OU=", "") -Path ($ou -replace "OU=.*?,") -ErrorAction Stop
+                            } -ArgumentList $user.OU
+                        }
+        
+                        # Convert password to secure string
+                        $securePassword = $user.Password | ConvertTo-SecureString -AsPlainText -Force
+                    } catch {
+                        Write-Error "Failed to process user $($user.Username): $_"
+                        continue
+                    }
+        
+                    # Create the user
+                    Invoke-Command -Session $session -ScriptBlock {
+                        param ($user, [SecureString]$securePassword)
+                        
+                        Write-Host "Creating user in OU: $($user.OU)"
+        
+                        try {
+                            New-ADUser `
+                                -Name "$($user.FirstName) $($user.LastName)" `
+                                -GivenName $user.FirstName `
+                                -Surname $user.LastName `
+                                -SamAccountName $user.Username `
+                                -UserPrincipalName "$($user.Username)@Gruppe4.lab" `
+                                -Path $user.OU `
+                                -AccountPassword $securePassword `
+                                -Enabled $true `
+                                -CannotChangePassword $true `
+                                -PasswordNeverExpires $true 
+        
+                            Write-Output "$($user.Username) has been successfully created."
+                        } catch {
+                            Write-Error "Failed to create user $($user.Username): $_"
+                        }
+                    } -ArgumentList $user, $securePassword
+                } 
+                catch {
+                    Write-Error "Failed to process user $($user.Username): $_"
+                }
             }
         }
-    }
-    elseif ($choice -eq "exit") {
-        Write-Host "Exiting script..."
-        break
-    }
-    else {
-        Write-Host "Invalid choice. Please try again."
-    }
+        elseif ($choice -eq "exit") {
+            Write-Host "Exiting script..."
+            break
+        }
+        else {
+            Write-Host "Invalid choice. Please try again."
+        }        
+        
 }
