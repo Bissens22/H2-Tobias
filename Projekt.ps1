@@ -128,49 +128,50 @@ while ($true) {
 
         if ($userchoice -eq "5") {
             $csvPath = Read-Host "Enter the path to the CSV file"
-            $users = Import-Csv -Path $csvPath
+            
+            # Check if file exists
+            if (-not (Test-Path $csvPath)) {
+                Write-Error "CSV file not found at path: $csvPath"
+                return 
+            }
         
-            Write-Host "DEBUG: Users Imported from CSV:"
-            $users | ForEach-Object { Write-Host "Username: $($_.Username), OU: $($_.OU), Password: $($_.Password)" }
+            try {
+                $users = Import-Csv -Path $csvPath
+            } catch {
+                Write-Error "Failed to import CSV file: $_"
+                return
+            }
+        
+            if ($users.Count -eq 0) {
+                Write-Warning "No users found in the CSV file."
+                return
+            }
         
             foreach ($user in $users) {
                 try {
+                    # Debug: Print out user details
+                    Write-Host "Processing user: $($user | ConvertTo-Json -Compress)"
+        
+                    # Check for null or empty required fields
+                    if ([string]::IsNullOrWhiteSpace($user.FirstName) -or 
+                        [string]::IsNullOrWhiteSpace($user.LastName) -or 
+                        [string]::IsNullOrWhiteSpace($user.Username) -or 
+                        [string]::IsNullOrWhiteSpace($user.Password) -or 
+                        [string]::IsNullOrWhiteSpace($user.OU)) {
+                        Write-Error "One or more required fields are empty for user $($user.Username). Skipping user."
+                        continue
+                    }
+        
                     # Ensure OU is trimmed and remove potential extra quotes
-                    $user.OU = $user.OU.Trim() -replace '^"|"$', ''  # Removes leading/trailing double quotes
-                    
-                    if (-not $user.OU -or [string]::IsNullOrEmpty($user.OU)) {
-                        Write-Error "OU is null or empty for user $($user.Username). Skipping user."
-                        continue
+                    $user.OU = $user.OU.Trim() -replace '^"|"$', ''
+        
+                    # Append domain components if not present
+                    if ($user.OU -notlike "*,DC=Gruppe4,DC=lab") {
+                        $user.OU = "$($user.OU),DC=Gruppe4,DC=lab"
                     }
         
-                    if (-not $user.Password) {
-                        Write-Error "Password is null for user $($user.Username). Skipping user."
-                        continue
-                    }
-        
-                    Write-Host "Processing user: $($user.Username), OU: $($user.OU)"
-        
-                    try {
-                        # Check if OU exists
-                        $ouExists = Invoke-Command -Session $session -ScriptBlock {
-                            param ($ou)
-                            Get-ADOrganizationalUnit -Filter "DistinguishedName -eq '$ou'" -ErrorAction SilentlyContinue
-                        } -ArgumentList $user.OU
-        
-                        # Create OU only if it does not exist
-                        if (-not $ouExists) {
-                            Invoke-Command -Session $session -ScriptBlock {
-                                param ($ou)
-                                New-ADOrganizationalUnit -Name ($ou -split ',')[0].Replace("OU=", "") -Path ($ou -replace "OU=.*?,") -ErrorAction Stop
-                            } -ArgumentList $user.OU
-                        }
-        
-                        # Convert password to secure string
-                        $securePassword = $user.Password | ConvertTo-SecureString -AsPlainText -Force
-                    } catch {
-                        Write-Error "Failed to process user $($user.Username): $_"
-                        continue
-                    }
+                    # Convert password to secure string
+                    $securePassword = ConvertTo-SecureString -String $user.Password -AsPlainText -Force
         
                     # Create the user
                     Invoke-Command -Session $session -ScriptBlock {
@@ -208,6 +209,5 @@ while ($true) {
         }
         else {
             Write-Host "Invalid choice. Please try again."
-        }        
-        
-}
+        }
+    }        
