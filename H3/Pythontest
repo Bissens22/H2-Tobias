@@ -1,0 +1,71 @@
+# Importerer et standard-bibliotek, som kan lave tilfældige tal
+# (samme idé som at inkludere et utility-library)
+import random
+
+# Definerer en funktion med navnet "play"
+# Alt indrykket nedenunder hører til denne funktion
+def play():
+
+    # Opretter en variabel "secret"
+    # random.randint(1, 100) vælger et tilfældigt helt tal mellem 1 og 100
+    # Dette er det tal, brugeren skal gætte
+    secret = random.randint(1, 100)
+
+    # Tæller antallet af gæt
+    guesses = 0
+
+    # Printer en besked til brugeren i konsollen
+    print("Guess a number between 1 and 100.")
+
+
+    # Starter en uendelig løkke
+    # Løkken kører indtil vi selv stopper den med 'break'
+    while True:
+
+        # try bruges til at håndtere fejl (exception handling)
+        # Python vil forsøge at køre koden her
+        try:
+            # input() læser brugerens input som tekst (string)
+            # int(...) forsøger at konvertere teksten til et helt tal
+            guess = int(input("Your guess: "))
+            guesses += 1
+        # Hvis konverteringen til int fejler (fx hvis brugeren skriver bogstaver)
+        except ValueError:
+            # Giver en fejlbesked til brugeren
+            print("Please enter a whole number.")
+
+            # continue springer resten af løkken over
+            # og starter næste iteration af while-løkken
+            continue
+
+        if guesses >= 10:
+            print("Sorry, you've used all your guesses. The number was", secret)
+            break
+
+        # Hvis gættet er mindre end det hemmelige tal
+        elif guess < secret:
+            print("Too low.")
+            print("Guesses so far:", guesses + 1)
+
+        # Hvis gættet er større end det hemmelige tal
+        elif guess > secret:
+            print("Too high.")
+            print("Guesses so far:", guesses + 1)
+        
+
+        # Hvis ingen af ovenstående er sande, må gættet være korrekt
+        else:
+            print("Correct! You win.")
+            print("Total guesses:", guesses + 1)
+            
+            # break stopper den uendelige while-løkke
+            break
+
+
+# Dette er Python’s måde at definere programmets startpunkt på
+# Koden her kører kun, hvis filen køres direkte
+# (og ikke hvis den importeres i et andet Python-program)
+if __name__ == "__main__":
+
+    # Kalder play()-funktionen og starter spillet
+    play()
