@@ -1,34 +1,29 @@
-# Importerer et standard-bibliotek, som kan lave tilfældige tal
-# (samme idé som at inkludere et utility-library)
+# Importerer et modul kaldet "random" der bruges til at generere tilfældige tal eller tage valg tilfældigt.
+
 import random
 
 # Definerer en funktion med navnet "play"
-# Alt indrykket nedenunder hører til denne funktion
 def play():
 
     # Opretter en variabel "secret"
     # random.randint(1, 100) vælger et tilfældigt helt tal mellem 1 og 100
-    # Dette er det tal, brugeren skal gætte
     secret = random.randint(1, 100)
 
     # Tæller antallet af gæt
     guesses = 0
 
-    # Printer en besked til brugeren i konsollen
-    print("Guess a number between 1 and 100.")
-
-
-    # Starter en uendelig løkke
-    # Løkken kører indtil vi selv stopper den med 'break'
+    print("Welcome to the Number Guessing Game!")
+    print("I'm thinking of a number between 1 and 100.")
+    print("You have 10 attempts to guess the number.")
+    # Starter et loop
     while True:
 
-        # try bruges til at håndtere fejl (exception handling)
-        # Python vil forsøge at køre koden her
+        # try bruges til at håndtere fejl der kan opstå i koden
         try:
-            # input() læser brugerens input som tekst (string)
-            # int(...) forsøger at konvertere teksten til et helt tal
+
             guess = int(input("Your guess: "))
             guesses += 1
+            
         # Hvis konverteringen til int fejler (fx hvis brugeren skriver bogstaver)
         except ValueError:
             # Giver en fejlbesked til brugeren
