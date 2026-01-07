@@ -19,7 +19,7 @@ def host_reachability ():
     print("HOST REACHABILITY CHECK")
     print("="*70 + "\n")
     
-    # Loop through each host in the hosts list
+      # Loop through each host in the hosts list
     for host in hosts:
         print(f"Testing {host}...")
         
@@ -31,32 +31,32 @@ def host_reachability ():
         try:
             sock.connect((host, port))  # Attempt to connect to host on port 80
             end_time = time.time()  # Record end time
-            print(f"  ✓ Port {port:3d} (HTTP)  | Reachable | {end_time - start_time:.2f}s")  # Print success message with response time
+            print(f"  ✓ Port {port} (HTTP)  | Reachable | {end_time - start_time:.2f}s")  # Print success message with response time
         except (socket.timeout, socket.error):  # Catch timeout or connection errors
-            print(f"  ✗ Port {port:3d} (HTTP)  | Unreachable")  # Print failure message
+            print(f"  ✗ Port {port} (HTTP)  | Unreachable")  # Print failure message
         finally:
-            sock.close()  # Always close the socket           
+            sock.close()  #closes the socket           
 
         # Test port 443 (HTTPS)
-        start_time = time.time()  # Record start time
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Create TCP socket
-        sock.settimeout(timeout)  # Set connection timeout
+        start_time = time.time() 
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
 
         try:
             sock.connect((host, secure_port))  # Attempt to connect to host on port 443
-            end_time = time.time()  # Record end time
-            print(f"  ✓ Port {secure_port:3d} (HTTPS) | Reachable | {end_time - start_time:.2f}s")  # Print success message with response time
-        except (socket.timeout, socket.error):  # if it timeout or errors it makes another output
-            print(f"  ✗ Port {secure_port:3d} (HTTPS) | Unreachable") 
+            end_time = time.time()
+            print(f"  ✓ Port {secure_port} (HTTPS) | Reachable | {end_time - start_time:.2f}s") 
+        except (socket.timeout, socket.error):
+            print(f"  ✗ Port {secure_port} (HTTPS) | Unreachable") 
         finally:
-            sock.close()  # Always close the socket
+            sock.close()  
         
         print()  # Print blank line for readability
     
     retry_option()
 #------------------------------------------------------------------------------
 def host_reachability_from_file():
-    for host in open("hosts.txt", "r"):
+    for host in open("hosts.txt", "r"): # Reads each line from hosts.txt
         start_time = time.time()
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(timeout)
@@ -81,7 +81,27 @@ def dns_lookup ():
             print(f" ✗ DNS Lookup failed for {host}")
 
     retry_option()
+#------------------------------------------------------------------------------
+def port_scanner ():
+    target_host = input("Enter the target host (IP or domain):") # Asks user for target host
+    target_port_min = input("Enter the starting port number:") # Asks user for starting port to scan
+    target_port_max = input("Enter the ending port number:") # Asks user for ending port to scan
+    print(f"Scanning ports {target_port_min} to {target_port_max} on host {target_host}...")
 
+    for port in range( int(target_port_min), int(target_port_max) + 1):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)  # Set a timeout for the connection attempt
+
+        try:
+            result = sock.connect_ex((target_host, port))
+            if result == 0:
+                print(f" ✓ Port {port} is open")
+            else:
+                print(f" ✗ Port {port} is closed")
+        except socket.error:
+            print(f" ✗ Could not connect to port {port}")
+        finally:
+            sock.close()
 #------------------------------------------------------------------------------
 
 def retry_option():   
@@ -101,9 +121,10 @@ def options ():
     print("1. Check Host Reachability")
     print("1.1 Check Host Reachablity with hosts in a .txt file")
     print("2. DNS Lookup")
+    print("3. port scanner")
 
     while True:
-        choice = input("Enter your choice (1, 1.1, 2): ")
+        choice = input("Enter your choice (1, 1.1, 2, 3): ")
         if choice == "1":
             host_reachability()
             break
@@ -112,6 +133,9 @@ def options ():
             break
         elif choice == "2":
             dns_lookup()
+            break
+        elif choice == "3":
+            port_scanner()
             break
 
         else:
