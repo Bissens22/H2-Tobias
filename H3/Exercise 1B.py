@@ -1,4 +1,3 @@
-
 str3 = "JohnDipPeta"
 str4 = "JaSonAy"
 
@@ -39,10 +38,7 @@ new_string2 = middle_char4 + middle_char5 + middle_char6
 
 print("New String:", new_string2)
 
-
-
-
-
+#--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 str1 = "JhonDipPeta"
 str2 = "JaSonAy"
