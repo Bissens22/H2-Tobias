@@ -1,10 +1,19 @@
 import requests
 
 try:
-
+    #Sends a "get" request to the website
     response = requests.get('https://httpbin.org/headers')
+    #print response headers to terminal
+    print("Response headers:")
+    print(response.headers)
 
-    print ('http get response.headers:', response.headers)
+    print("-"*20)
 
-except requests.RequestException as e:
-    print("HTTP GET request failed:", e)
+    #Print response text to terminal
+    print("Response text:")
+    print(response.text)
+
+#Catch errors and prints a error message to terminal
+except requests.RequestException as error:
+
+    print("Get request failed:", error)
